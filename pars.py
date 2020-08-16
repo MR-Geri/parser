@@ -1,6 +1,9 @@
+import datetime
 import requests
 from bs4 import BeautifulSoup
 import csv
+from multiprocessing import Process
+import json
 
 
 URL = 'https://www.avito.ru/lipetsk/mebel_i_interer/myagkaya_mebel-ASgBAgICAURaqgI?q=диван'
@@ -26,13 +29,29 @@ def get_content(html):
             'place': i.find('div', class_='item-address-georeferences').get_text(strip=True),
             'time': i.find('div', class_='snippet-date-row').get_text(strip=True)
         })
-    print(data)
     return data
 
 
 def get_page(html):
     soup = BeautifulSoup(html, 'html.parser')
     return int(soup.find('div', class_='pagination-root-2oCjZ').find_all('span')[-2].get_text())
+
+
+def for_html(beginning, end):
+    data = []
+    for num in range(beginning, end + 1):
+        data.extend(get_content(get_html(URL, params={'p': num}).text))
+    try:
+        d = json.load(open('data.json'))
+    except:
+        d = []
+        print('Была ошибка в считывании информации')
+    d.extend(data)
+    try:
+        with open("data.json", "w") as write_file:
+            json.dump(d, write_file)
+    except:
+        print('Была ошибка в записи информации')
 
 
 def save_file(items, path):
@@ -43,6 +62,29 @@ def save_file(items, path):
             writer.writerow([i['name'], i['url'], i['RUB'], i['place'], i['time']])
 
     
+def parse_process(process=5):
+    html = get_html(URL)
+    if html.status_code == 200:
+        pages = get_page(html.text)
+        data_process = []
+        last = 0
+        print(f'Начало {process} парсинга')
+        for num in range(0, pages, process):
+            data_process.append(Process(target=for_html, args=(num + 1, num + process)))
+            last = num
+        if pages % process != 0:
+            data_process.append(Process(target=for_html, args=(last + 1, pages)))
+        for i in data_process:
+            i.start()
+        for i in data_process:
+            i.join()
+        d = json.load(open('data.json'))
+        save_file(d, f'file_{process}_process.csv')
+        print(f'Конец {process} парсинга')
+    else:
+        print(f'{html.status_code} ERROR')
+
+
 def parse():
     html = get_html(URL)
     if html.status_code == 200:
@@ -51,10 +93,15 @@ def parse():
         for num in range(1, pages + 1):
             print(f'Парсинг {num} страницы из {pages}...')
             data_set.extend(get_content(get_html(URL, params={'p': num}).text))
-        save_file(data_set, 'file.csv')
+        save_file(data_set, 'file_1_process.csv')
     else:
-        print('ERROR')
+        print(f'{html.status_code} ERROR')
 
 
 if __name__ == '__main__':
+    date = datetime.datetime.now()
+    parse_process()
+    print(datetime.datetime.now() - date)
+    date = datetime.datetime.now()
     parse()
+    print(datetime.datetime.now() - date)
