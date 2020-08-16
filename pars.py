@@ -37,7 +37,7 @@ def get_page(html):
     return int(soup.find('div', class_='pagination-root-2oCjZ').find_all('span')[-2].get_text())
 
 
-def for_html(beginning, end):
+def multiprocess(beginning, end):
     data = []
     for num in range(beginning, end + 1):
         data.extend(get_content(get_html(URL, params={'p': num}).text))
@@ -70,12 +70,12 @@ def parse_process(process=5):
         last = 0
         print(f'Начало {process} парсинга')
         for num in range(0, pages, process):
-            data_process.append(Process(target=for_html, args=(num + 1, num + process)))
+            data_process.append(Process(target=multiprocess, args=(num + 1, num + process)))
             last = num
         if pages % process != 0:
-            data_process.append(Process(target=for_html, args=(last + 1, pages)))
-        for i in data_process:
-            i.start()
+            process = Process(target=multiprocess, args=(last + 1, pages))
+            data_process.append(process)
+            process.start()
         for i in data_process:
             i.join()
         d = json.load(open('data.json'))
