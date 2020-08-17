@@ -39,7 +39,7 @@ def get_page(html):
 
 def multiprocess(beginning, end):
     data = []
-    for num in range(beginning, end + 1):
+    for num in range(beginning, end):
         data.extend(get_content(get_html(URL, params={'p': num}).text))
     try:
         d = json.load(open('data.json'))
@@ -69,13 +69,13 @@ def parse_process(process=5):
         data_process = []
         last = 0
         print(f'Начало {process} парсинга')
-        for num in range(0, pages, process):
-            data_process.append(Process(target=multiprocess, args=(num + 1, num + process)))
+        for num in range(1, pages, process):
+            data_process.append(Process(target=multiprocess, args=(num, num + process)))
             last = num
         if pages % process != 0:
-            process = Process(target=multiprocess, args=(last + 1, pages))
-            data_process.append(process)
-            process.start()
+            data_process.append(Process(target=multiprocess, args=(last, pages + 1)))
+        for i in data_process:
+            i.start()
         for i in data_process:
             i.join()
         d = json.load(open('data.json'))
@@ -100,7 +100,7 @@ def parse():
 
 if __name__ == '__main__':
     date = datetime.datetime.now()
-    parse_process()
+    # parse_process()
     print(datetime.datetime.now() - date)
     date = datetime.datetime.now()
     parse()
