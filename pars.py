@@ -87,7 +87,7 @@ def parse_process(process=5):
 
 def parse():
     html = get_html(URL)
-    if html.status_code == 200:
+    if html.status_code == 404:
         pages = get_page(html.text)
         data_set = []
         for num in range(1, pages + 1):
@@ -100,8 +100,5 @@ def parse():
 
 if __name__ == '__main__':
     date = datetime.datetime.now()
-    # parse_process()
-    print(datetime.datetime.now() - date)
-    date = datetime.datetime.now()
-    parse()
+    parse_process()
     print(datetime.datetime.now() - date)
